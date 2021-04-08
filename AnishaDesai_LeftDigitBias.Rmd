@@ -1,0 +1,90 @@
+---
+title: "HW2"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r hw2 plot}
+rm(list = ls())
+db = read.csv("carsdata.csv")
+
+## coerce model year into a factor variable, use 2006 as the reference level
+db$modelyear = factor(db$modelyear)
+db$modelyear = relevel(db$modelyear,"2006")
+## coerce month into a factor variable, use month 9 as the reference level
+db$month = factor(db$month)
+db$month = relevel(db$month,"9")
+summary(db)
+```
+
+```{r decomposing the mile}
+## decompose the mile
+db$mile10k = floor(db$mile/10)*10
+db$mile1k = floor(db$mile - db$mile10k)
+db$milermd = db$mile - floor(db$mile)
+db$milermd = round(db$milermd,digits = 3)
+
+head(db[,c("mile","mile10k","mile1k","milermd")])
+```
+
+```{r decomposing price}
+## decompose the price 
+db$price10k = floor(db$price/10)*10
+db$price1k = floor(db$price - db$price10k)
+db$pricermd = db$price - floor(db$price)
+db$pricermd = round(db$pricermd,digits = 3)
+
+head(db[,c("price","price10k","price1k","pricermd")])
+```
+
+```{r plot}
+## plot price against mile
+plot(db$mile,db$price,type="p",main="Price against Mile",xlab="Mile",ylab="Price",pch=1,col=rep(1:5,each=10),cex=0.4)
+legend("topright",legend=paste(2006:2010), col=1:5,pch=1,cex=0.8,bty="o")
+```
+
+###[1] Plot a scatterplot of price against mile. Briefly explain the major patterns in the price-mile relationship.
+1) There is a slight negative correlation i.e. as the mileage is increasing, prices are decreasing
+2) However, there are many horizontal lines seen. Which means that as the miles are increasing, prices are staying constant and not decreasing at the same rate.
+3) This means that there are a lot of cars with similar selling price even though the mileage is different and that's because mileage is not the only factor affecting the price.
+
+
+```{r linear regression}
+## linear price regression
+reg1 = glm(price ~ mile + modelyear + model + month, data = db)
+summary(reg1)
+```
+
+```{r linear regression with decomposed mile}
+## linear price regression, with mile replaced with the decomposed mile digits
+reg2 = glm(price ~ mile10k + mile1k + milermd + engine_vol + modelyear + model + month, data = db)
+summary(reg2)
+```
+
+
+###2] Regress price on all car attributes (use decomposed mile) and month. How does the price-mile relationship here compare with that shown in the scatterplot?
+Only mile10k  and mile1k variables are significant as the p-value is less than 0.05. The other i.e. milermd decomposing variable is insignificant while determining the price. For every 1 unit increase in price, the mile decreases by -0.052334, which is comparatively very less. This justifies the presence of horizontal lines in the plot i.e. a lot of cars have similar prices even though the mileage is different.
+
+
+```{r logistic regression}
+## logistic demand regression, with mile replaced with the decomposed price ( hmm ... what variable should be decomposed here?)
+reg3 = glm(sold ~ price10k + price1k + pricermd + mile + modelyear + engine_vol+model + month, data = db, family = binomial)
+summary(reg3)
+```
+
+###[3] Fit a logistic regression for whether a car was sold on the first day to investigate the LDB of car buyers. Does car buyers show LDB in their attention to the digits of price? Briefly explain your answer
+
+The p-value for price10k and price1k is less than 0.05. Therefore, price10k and price1k variables are significant with almost 100% confidence whereas the right ones aren't significant enough.
+
+As the first 2 digits from the left side are significant, the LDB bias is present for sold vs price.
+
+###[4] Briefly discuss the implications of your findings above for the pricing of used cars
+
+We can conclude that the left digit bias exists when a consumer is trying to purchase a used car. Also, the LDS can be across multiple variables of price and miles.
+The store managers can manipulate the right digits as they are not considered as an insignificant factor by consumers while deciding on purchasing the car.This is the reason we always find prices of cars ending with .999 or something similar.
+```
